@@ -4,14 +4,14 @@
 #include <time.h>
 
 // #define FILENAME "docword.nytimes.small.txt" // only 10 documents
-// #define N_DOCS    11
+// #define N_DOCS    10
 // #define DOC_LINES 2264
 #define FILENAME "docword.nytimes.txt"
-#define N_DOCS 3001
+#define N_DOCS 3000
 #define DOC_LINES 655468
 
 #define DOC_COLS  3
-#define N_VOCAB   102661
+#define N_VOCAB   102660
 
 // Algorithms
 double** create_bag();
@@ -24,22 +24,26 @@ double   max_distortion(double**, double**);
 
 // Helpers
 void     read_file(char[], size_t, size_t, size_t, int[][DOC_COLS]);
-double** matrix_alloc(int, int);
+void     print_time(char[], clock_t, clock_t);
+double** load_distance(double**);
+void     save_distance(double** table);
+double   rand_normal(void);
+double** mat_alloc(int, int);
 void     free_matrix(double**, int);
 void     check_memory(void *);
-void     print_time(char[], clock_t, clock_t);
-double   rand_normal(void);
+double** mat_mul1(int, int, double *const *, int, double *const *);
+double** mat_mul2(int, int, double *const *, int, double *const *);
 
 int main()
 {
+    clock_t  begin;
     double** bag = create_bag();
-    clock_t  begin = clock();
-    double** distances = create_distance(bag, N_VOCAB);
-    print_time("Distance calculation", begin, clock());
+    double** distances = load_distance(bag);
+
     srand(time(NULL));
 
     int dimensions[] = {4, 16, 64, 256, 1024, 4096, 15768};
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 6; i++)
     {
         int dim = dimensions[i];
         printf("Number of dimensions: %d\n", dim);
@@ -99,22 +103,22 @@ double** create_bag()
     int docword[docword_rows][docword_cols];
     read_file(FILENAME, docword_offset, docword_rows, docword_cols, docword);
 
-    double** bag = matrix_alloc(N_DOCS, N_VOCAB);
+    double** bag = mat_alloc(N_DOCS, N_VOCAB);
     for (int i = 0; i < N_DOCS; i++)
       for (int j = 0; j < N_VOCAB; j++)
         bag[i][j] = 0;
 
     for ( int i = 0; i < docword_rows; i++ )
-        bag[docword[i][0]][docword[i][1]] = (int) docword[i][2];
+        bag[docword[i][0]-1][docword[i][1]-1] = (int) docword[i][2];
 
-    (bag[1][17654] == 4) ? printf("Bag created\n") : printf("Bag error\n");
+    (bag[0][17653] == 4) ? printf("Bag created\n") : printf("Bag error\n");
 
     return bag;
 }
 
 double** create_achlioptas(int size)
 {
-    double** matrix = matrix_alloc(N_VOCAB, size);
+    double** matrix = mat_alloc(N_VOCAB, size);
     for (int i = 0; i < N_VOCAB; i++)
       for (int j = 0; j < size; j++)
       {
@@ -129,7 +133,7 @@ double** create_achlioptas(int size)
 
 double** create_gaussian(int size)
 {
-    double** matrix = matrix_alloc(N_VOCAB, size);
+    double** matrix = mat_alloc(N_VOCAB, size);
     for (int i = 0; i < N_VOCAB; i++)
       for (int j = 0; j < size; j++)
       {
@@ -141,10 +145,16 @@ double** create_gaussian(int size)
 
 double** create_distance(double** table, int n_cols)
 {
-    double** distances = matrix_alloc(N_DOCS, N_DOCS);
-    for (int i = 1; i < N_DOCS; i++)
+    double** distances = mat_alloc(N_DOCS, N_DOCS);
+    double distance;
+
+    for (int i = 0; i < N_DOCS; i++)
         for (int j = i+1; j < N_DOCS; j++)
-            distances[i][j] = calculate_distance(table[i], table[j], n_cols);
+        {
+            distance = calculate_distance(table[i], table[j], n_cols);
+            distances[i][j] = distance;
+        }
+
     return distances;
 }
 
@@ -158,25 +168,14 @@ double calculate_distance(double* a, double* b, int n_cols)
 
 double** create_projection(double** bag, double** matrix, int dim)
 {
-    double** result = matrix_alloc(N_DOCS, dim);
-
-    for(int i=0; i < N_DOCS; i++)
-        for(int j=0; j < dim; j++)
-            result[i][j] = 0;
-
-    for(int i = 0; i < N_DOCS; i++)
-        for(int j = 0; j < dim; j++)
-            for(int k = 0; k < N_VOCAB; k++)
-                result[i][j] += bag[i][k] * matrix[k][j];
-
-    return result;
+    return mat_mul2(N_DOCS, N_VOCAB, bag, dim, matrix);
 }
 
 double max_distortion(double** x, double** wx)
 {
     double distortion, result = 0;
 
-    for (int i = 1; i < N_DOCS; i++)
+    for (int i = 0; i < N_DOCS; i++)
         for (int j = i+1; j < N_DOCS; j++)
         {
             distortion = fabs((wx[i][j] / x[i][j]) - 1);
@@ -213,7 +212,47 @@ void read_file(char filename[], size_t offset, size_t N, size_t M, int table[N][
     }
 }
 
-double** matrix_alloc(int rows, int cols)
+double** load_distance(double** bag)
+{
+    double** table;
+
+    // if (N_DOCS == 10)
+    // {
+        clock_t begin = clock();
+        table = create_distance(bag, N_VOCAB);
+        print_time("Distance calculation", begin, clock());
+        save_distance(table);
+    // }
+    // else {
+    //     FILE *file = fopen("distances.txt", "r");
+    //     table = mat_alloc(N_DOCS, N_DOCS);
+    //     if ( file )
+    //     {
+    //         size_t i, j;
+    //         for ( i = 0; i < N_DOCS; ++i )
+    //             for ( j = 0; j < N_DOCS; ++j )
+    //                 fscanf(file, "%lf ", &table[i][j]);
+    //         fclose(file);
+    //     }
+    // }
+    return table;
+}
+
+void save_distance(double** table)
+{
+    FILE *file = fopen("distances.txt", "w+");
+    if ( file )
+    {
+        size_t i, j;
+
+        for ( i = 0; i < N_DOCS; ++i )
+            for ( j = 0; j < N_DOCS; ++j )
+                fprintf(file, "%a ", table[i][j]);
+        fclose(file);
+    }
+}
+
+double** mat_alloc(int rows, int cols)
 {
   double** space = malloc(rows * sizeof(double*));
   check_memory(space);
@@ -280,9 +319,82 @@ double rand_normal(void)
     return (mu + sigma * (double) X1);
 }
 
+double** mat_transpose(int rows, int cols, double *const* a)
+{
+	double** m;
+	m = mat_alloc(cols, rows);
 
-        // double progress = 100.0*i/N_DOCS;
-        // double elapsed = (double)(clock() - begin) / CLOCKS_PER_SEC;
-        // double total = elapsed*N_DOCS/i;
-        // printf("%.5f%% - Elapsed time: %.4f minutes - Remaining time: %.4f minutes \r", progress, elapsed/60, (total - elapsed)/60); fflush(stdout);
+	for (int i = 0; i < rows; i++)
+		for (int j = 0; j < cols; j++)
+			m[j][i] = a[i][j];
 
+	return m;
+}
+
+double** mat_mul1(int n_a_rows, int n_a_cols, double *const *a, int n_b_cols, double *const *b)
+{
+	int i, j, k, n_b_rows = n_a_cols;
+	double **matrix, **bT;
+	matrix = mat_alloc(n_a_rows, n_b_cols);
+	bT = mat_transpose(n_b_rows, n_b_cols, b);
+
+	for (i = 0; i < n_a_rows; i++) {
+		const double *ai = a[i];
+		double *mi = matrix[i];
+
+		for (j = 0; j < n_b_cols; j++) {
+			double t = 0.0f, *bTj = bT[j];
+
+			for (k = 0; k < n_a_cols; k++)
+				t += ai[k] * bTj[k];
+			mi[j] = t;
+		}
+	}
+	free_matrix(bT, n_b_cols);
+
+	return matrix;
+}
+
+#include <emmintrin.h>
+double sdot_sse(int n, const double *x, const double *y)
+{
+    int i, n8 = n>>3<<3;
+    __m128d vs1, vs2;
+    double s, t[4];
+    vs1 = _mm_setzero_pd();
+    vs2 = _mm_setzero_pd();
+    for (i = 0; i < n8; i += 8) {
+        __m128d vx1, vx2, vy1, vy2;
+        vx1 = _mm_loadu_pd(&x[i]);
+        vx2 = _mm_loadu_pd(&x[i+4]);
+        vy1 = _mm_loadu_pd(&y[i]);
+        vy2 = _mm_loadu_pd(&y[i+4]);
+        vs1 = _mm_add_pd(vs1, _mm_mul_pd(vx1, vy1));
+        vs2 = _mm_add_pd(vs2, _mm_mul_pd(vx2, vy2));
+    }
+    for (s = 0.0f; i < n; ++i) s += x[i] * y[i];
+    _mm_storeu_pd(t, vs1);
+    s += t[0] + t[1] + t[2] + t[3];
+    _mm_storeu_pd(t, vs2);
+    s += t[0] + t[1] + t[2] + t[3];
+    return s;
+}
+
+double **mat_mul2(int n_a_rows, int n_a_cols, double *const *a, int n_b_cols, double *const *b)
+{
+    int i, j, ii, jj, x = 16, n_b_rows = n_a_cols;
+    double **m, **bT;
+    m = mat_alloc(n_a_rows, n_b_cols);
+    bT = mat_transpose(n_b_rows, n_b_cols, b);
+    for (i = 0; i < n_a_rows; i += x) {
+        for (j = 0; j < n_b_cols; j += x) {
+            int je = n_b_cols < j + x? n_b_cols : j + x;
+            int ie = n_a_rows < i + x? n_a_rows : i + x;
+            for (ii = i; ii < ie; ++ii)
+                for (jj = j; jj < je; ++jj)
+                    m[ii][jj] += sdot_sse(n_a_cols, a[ii], bT[jj]);
+        }
+    }
+    free_matrix(bT, n_b_cols);
+    return m;
+}
