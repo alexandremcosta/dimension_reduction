@@ -356,6 +356,8 @@ float rand_normal(float mu, float sigma)
 // Intel header for faster float operations
 #include <xmmintrin.h>
 
+// Adapted from: https://github.com/attractivechaos/matmul
+// method: SSE+tiling sdot
 float sdot_sse(int n, const float *x, const float *y)
 {
     int i, n8 = n>>3<<3;

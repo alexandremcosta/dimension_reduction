@@ -21,14 +21,14 @@ double   max_distortion(double**, double**);
 double   avg_distortion(double**, double**);
 
 // Helpers
-void    read_file(char[], size_t, size_t, size_t, int[][DOC_COLS]);
-void    print_time(clock_t, clock_t);
+void     read_file(char[], size_t, size_t, size_t, int[][DOC_COLS]);
+void     print_time(clock_t, clock_t);
 double** load_distance(double**);
-void    save_distance(double** table);
+void     save_distance(double** table);
 double   rand_normal(double, double);
 double** mat_alloc(int, int);
-void    free_matrix(double**, int);
-void    check_memory(void *);
+void     free_matrix(double**, int);
+void     check_memory(void *);
 double** mat_mult(int, int, double *const *, int, double *const *);
 
 int main()
@@ -355,6 +355,9 @@ double rand_normal(double mu, double sigma)
 
 // Intel header for faster double operations
 #include <emmintrin.h>
+
+// Adapted from: https://github.com/attractivechaos/matmul
+// method: SSE+tiling sdot
 double sdot_sse(int n, const double *x, const double *y)
 {
     int i, n8 = n>>3<<3;
