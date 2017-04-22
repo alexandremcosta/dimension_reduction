@@ -21,18 +21,18 @@ double** create_achlioptas(int);
 double** create_gaussian(int);
 double** create_projection(double**, double**, int);
 double   max_distortion(double**, double**);
+double   avg_distortion(double**, double**);
 
 // Helpers
 void     read_file(char[], size_t, size_t, size_t, int[][DOC_COLS]);
 void     print_time(char[], clock_t, clock_t);
 double** load_distance(double**);
 void     save_distance(double** table);
-double   rand_normal(void);
+double   rand_normal(double, double);
 double** mat_alloc(int, int);
 void     free_matrix(double**, int);
 void     check_memory(void *);
-double** mat_mul1(int, int, double *const *, int, double *const *);
-double** mat_mul2(int, int, double *const *, int, double *const *);
+double** mat_mult(int, int, double *const *, int, double *const *);
 
 int main()
 {
@@ -46,7 +46,7 @@ int main()
     for (int i = 0; i < 6; i++)
     {
         int dim = dimensions[i];
-        printf("Number of dimensions: %d\n", dim);
+        printf("Number of dimensions: %d\n\n", dim);
 
         // Achlioptas
         begin = clock();
@@ -63,8 +63,13 @@ int main()
 
         double ach_distortion = max_distortion(distances, ach_distances);
         printf("Achlioptas max distortion: %f\n", ach_distortion);
+        ach_distortion = avg_distortion(distances, ach_distances);
+        printf("Achlioptas avg distortion: %f\n", ach_distortion);
 
-        printf("---\n");
+        free_matrix(ach_matrix, N_VOCAB);
+        free_matrix(ach_projection, N_DOCS);
+        free_matrix(ach_distances, N_DOCS);
+        printf("\n");
 
         // Normal
         begin = clock();
@@ -81,15 +86,14 @@ int main()
 
         double nor_distortion = max_distortion(distances, nor_distances);
         printf("Normal max distortion: %f\n", nor_distortion);
+        nor_distortion = avg_distortion(distances, nor_distances);
+        printf("Normal avg distortion: %f\n", nor_distortion);
 
-        free_matrix(ach_matrix, N_VOCAB);
-        free_matrix(ach_projection, N_DOCS);
-        free_matrix(ach_distances, N_DOCS);
         free_matrix(nor_matrix, N_VOCAB);
         free_matrix(nor_projection, N_DOCS);
         free_matrix(nor_distances, N_DOCS);
 
-        printf("############\n\n");
+        printf("\n#############################\n\n");
     }
 
     free_matrix(distances, N_DOCS);
@@ -125,7 +129,7 @@ double** create_achlioptas(int size)
           double random = (double)rand() / (double)RAND_MAX;
           random = (random < (1./6) ? -1 : (random < (5./6) ? 0 : 1));
           random = random * sqrt(3./N_VOCAB);
-          matrix[i][j] = random;
+          matrix[i][j] = sqrt(N_VOCAB*1.0/size) * random;
       }
 
     return matrix;
@@ -137,7 +141,7 @@ double** create_gaussian(int size)
     for (int i = 0; i < N_VOCAB; i++)
       for (int j = 0; j < size; j++)
       {
-          matrix[i][j] = rand_normal();
+          matrix[i][j] = sqrt(N_VOCAB*1.0/size) * rand_normal(0, 1/sqrt(N_VOCAB));
       }
 
     return matrix;
@@ -168,7 +172,7 @@ double calculate_distance(double* a, double* b, int n_cols)
 
 double** create_projection(double** bag, double** matrix, int dim)
 {
-    return mat_mul2(N_DOCS, N_VOCAB, bag, dim, matrix);
+    return mat_mult(N_DOCS, N_VOCAB, bag, dim, matrix);
 }
 
 double max_distortion(double** x, double** wx)
@@ -179,11 +183,32 @@ double max_distortion(double** x, double** wx)
         for (int j = i+1; j < N_DOCS; j++)
         {
             distortion = fabs((wx[i][j] / x[i][j]) - 1);
-            if (distortion > result)
+            if (distortion > result && fabs(wx[i][j] - 0) > 0.00001) // Ignore distortion os duplicated documents
+            {
                 result = distortion;
+            }
         }
 
     return result;
+}
+
+double avg_distortion(double** x, double** wx)
+{
+    double distortion, result = 0;
+    int count = 0;
+
+    for (int i = 0; i < N_DOCS; i++)
+        for (int j = i+1; j < N_DOCS; j++)
+        {
+            distortion = fabs((wx[i][j] / x[i][j]) - 1);
+            if (distortion > result && fabs(wx[i][j] - 0) > 0.00001) // Ignore distortion os duplicated documents
+            {
+                result += distortion;
+                count++;
+            }
+        }
+
+    return result / count;
 }
 
 // Helpers
@@ -216,25 +241,25 @@ double** load_distance(double** bag)
 {
     double** table;
 
-    // if (N_DOCS == 10)
-    // {
+    if (0)
+    {
         clock_t begin = clock();
         table = create_distance(bag, N_VOCAB);
         print_time("Distance calculation", begin, clock());
         save_distance(table);
-    // }
-    // else {
-    //     FILE *file = fopen("distances.txt", "r");
-    //     table = mat_alloc(N_DOCS, N_DOCS);
-    //     if ( file )
-    //     {
-    //         size_t i, j;
-    //         for ( i = 0; i < N_DOCS; ++i )
-    //             for ( j = 0; j < N_DOCS; ++j )
-    //                 fscanf(file, "%lf ", &table[i][j]);
-    //         fclose(file);
-    //     }
-    // }
+    }
+    else {
+        FILE *file = fopen("distances.txt", "r");
+        table = mat_alloc(N_DOCS, N_DOCS);
+        if ( file )
+        {
+            size_t i, j;
+            for ( i = 0; i < N_DOCS; ++i )
+                for ( j = 0; j < N_DOCS; ++j )
+                    fscanf(file, "%lf ", &table[i][j]);
+            fclose(file);
+        }
+    }
     return table;
 }
 
@@ -289,9 +314,8 @@ void print_time(char msg[], clock_t begin, clock_t end)
 }
 
 // https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
-double rand_normal(void)
+double rand_normal(double mu, double sigma)
 {
-    double mu = 0, sigma = 1.0/N_VOCAB;
     double U1, U2, W, mult;
     static double X1, X2;
     static int call = 0;
@@ -319,42 +343,7 @@ double rand_normal(void)
     return (mu + sigma * (double) X1);
 }
 
-double** mat_transpose(int rows, int cols, double *const* a)
-{
-	double** m;
-	m = mat_alloc(cols, rows);
-
-	for (int i = 0; i < rows; i++)
-		for (int j = 0; j < cols; j++)
-			m[j][i] = a[i][j];
-
-	return m;
-}
-
-double** mat_mul1(int n_a_rows, int n_a_cols, double *const *a, int n_b_cols, double *const *b)
-{
-	int i, j, k, n_b_rows = n_a_cols;
-	double **matrix, **bT;
-	matrix = mat_alloc(n_a_rows, n_b_cols);
-	bT = mat_transpose(n_b_rows, n_b_cols, b);
-
-	for (i = 0; i < n_a_rows; i++) {
-		const double *ai = a[i];
-		double *mi = matrix[i];
-
-		for (j = 0; j < n_b_cols; j++) {
-			double t = 0.0f, *bTj = bT[j];
-
-			for (k = 0; k < n_a_cols; k++)
-				t += ai[k] * bTj[k];
-			mi[j] = t;
-		}
-	}
-	free_matrix(bT, n_b_cols);
-
-	return matrix;
-}
-
+// Intel header for faster double operations
 #include <emmintrin.h>
 double sdot_sse(int n, const double *x, const double *y)
 {
@@ -380,7 +369,20 @@ double sdot_sse(int n, const double *x, const double *y)
     return s;
 }
 
-double **mat_mul2(int n_a_rows, int n_a_cols, double *const *a, int n_b_cols, double *const *b)
+// Matrix multiplication
+double** mat_transpose(int rows, int cols, double *const* a)
+{
+	double** m;
+	m = mat_alloc(cols, rows);
+
+	for (int i = 0; i < rows; i++)
+		for (int j = 0; j < cols; j++)
+			m[j][i] = a[i][j];
+
+	return m;
+}
+
+double **mat_mult(int n_a_rows, int n_a_cols, double *const *a, int n_b_cols, double *const *b)
 {
     int i, j, ii, jj, x = 16, n_b_rows = n_a_cols;
     double **m, **bT;
