@@ -1,36 +1,51 @@
-#include "svd.h"
+#include <gsl/gsl_linalg.h>
 #include "trabalho_lib.h"
 
 int main()
 {
     float** bag = create_bag();
     printf("Bag created...\n");
-    float** transposed = mat_transpose(N_DOCS, N_VOCAB, bag);
-    printf("Bag transposed...\n");
-    free_matrix(bag, N_DOCS);
 
     float** distances = load_distance();
 
-    float *d = malloc(N_DOCS * sizeof(float)),
-          **v = mat_alloc(N_DOCS, N_DOCS),
-          **svd_distances;
+    float **svd_distances;
+
+    gsl_matrix* A = gsl_matrix_calloc(N_VOCAB, N_DOCS);
+    gsl_matrix* V = gsl_matrix_calloc(N_DOCS, N_DOCS);
+    gsl_matrix* X = gsl_matrix_calloc(N_DOCS, N_DOCS);
+    gsl_vector* S = gsl_vector_calloc(N_DOCS);
+    gsl_vector* work = gsl_vector_calloc(N_DOCS);
+
+    // Initialize gsl values
+    for (int i = 0; i < N_DOCS; i++)
+        for (int j = 0; j < N_VOCAB; j++)
+            gsl_matrix_set(A, j, i, (double) bag[i][j]);
+
+    free_matrix(bag, N_DOCS);
 
     printf("Running SVD...\n");
 
     clock_t begin = clock();
-    dsvd(transposed, N_VOCAB, N_DOCS, d, v);
+    gsl_linalg_SV_decomp_mod(A, X, V, S, work);
+
     printf("SVD time: %f\n", (double) (clock() - begin) / CLOCKS_PER_SEC);
 
-    free_matrix(transposed, N_VOCAB);
+    float** matrix = mat_alloc(N_DOCS, N_DOCS);
+    for (int i = 0; i < N_DOCS; i++)
+        for (int j = 0; j < N_DOCS; j++)
+            matrix[i][j] = (float) gsl_matrix_get(A, i, j);
 
-    float** matrix = mat_transpose(N_DOCS, N_DOCS, v);
-    free_matrix(v, N_DOCS);
+    gsl_matrix_free(A);
+    gsl_matrix_free(V);
+    gsl_matrix_free(X);
+    gsl_vector_free(work);
 
     printf("S: ");
     for(int i = 0; i < 70; i++)
-        printf("%f ", d[i]);
+        printf("%f ", gsl_vector_get(S, i));
     printf("\n");
-    free(d);
+
+    gsl_vector_free(S);
 
     int dimensions[] = {4, 16, 64, 256};
     for (int idim = 0; idim < 4; idim++)
