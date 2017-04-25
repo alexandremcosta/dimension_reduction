@@ -5,7 +5,7 @@
 3. trabalho_lib.c (and .h) is a small library used by 1 and 2 to perform common operations such as matrix multiplication, distance calculation, time measurement, memory allocation and file I/O
 
 The reduced matrix is then compared to the original via euclidian distance.
-Maximum and average distortion (to the original data) is also measured.
+Maximum and average distortion (to the original data) are also measured.
 
 ## Tests
 
