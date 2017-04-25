@@ -3,19 +3,26 @@
 #include <math.h>
 #include <time.h>
 
+#define N_DOCS    3000
+#define DOC_LINES 655468
+#define FILENAME  "docword.nytimes.txt"
+
+// Change number of documents to run faster
 // #define N_DOCS    10
 // #define DOC_LINES 2264
-#define N_DOCS    400
-#define DOC_LINES 91620
+//
 // #define N_DOCS    100
 // #define DOC_LINES 21853
+//
 // #define N_DOCS    200
 // #define DOC_LINES 44412
-#define FILENAME  "docword.nytimes.small.txt"
+//
+// #define N_DOCS    400
+// #define DOC_LINES 91620
+//
+// Smaller docword to be used with 400 docs maximum
+// #define FILENAME  "docword.nytimes.small.txt"
 
-// #define FILENAME  "docword.nytimes.txt"
-// #define N_DOCS    3000
-// #define DOC_LINES 655468
 #define DOC_COLS  3
 #define N_VOCAB   102660
 

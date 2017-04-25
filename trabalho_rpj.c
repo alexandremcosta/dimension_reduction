@@ -12,18 +12,22 @@ float   rand_normal(float, float);
 int main()
 {
     float **rand_matrix, **rand_projection, **rand_distances, distortion;
-
     float** bag = create_bag();
-    float** distances = load_distance(bag);
 
-    clock_t begin;
+    printf("Calculating distances (aprox. 40min)... ");
+    fflush(stdout);
+
+    clock_t begin = clock();
+    float** distances = create_distance(bag, N_VOCAB);
+    print_time(begin, clock());
+
     srand(time(NULL));
 
     int dimensions[] = {4, 16, 64, 256, 1024, 4096, 15768};
     for (int idim = 0; idim < 6; idim++)
     {
         int dim = dimensions[idim];
-        printf("Number of dimensions: %d\n\n", dim);
+        printf("\nNumber of dimensions: %d\n\n", dim);
         fflush(stdout);
 
         printf("Achlioptas\tMatrix (sec)\tProj (sec)\tDistance (sec)\tMax distortion\tAvg distortion\n");
@@ -82,7 +86,7 @@ int main()
             fflush(stdout);
         }
 
-        printf("\n\n");
+        printf("\n");
     }
 
     free_matrix(distances, N_DOCS);
