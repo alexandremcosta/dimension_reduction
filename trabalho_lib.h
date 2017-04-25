@@ -3,11 +3,21 @@
 #include <math.h>
 #include <time.h>
 
-#define FILENAME       "docword.nytimes.txt"
-#define N_DOCS         3000
-#define DOC_LINES      655468
-#define DOC_COLS       3
-#define N_VOCAB        102660
+// #define N_DOCS    10
+// #define DOC_LINES 2264
+#define N_DOCS    400
+#define DOC_LINES 91620
+// #define N_DOCS    100
+// #define DOC_LINES 21853
+// #define N_DOCS    200
+// #define DOC_LINES 44412
+#define FILENAME  "docword.nytimes.small.txt"
+
+// #define FILENAME  "docword.nytimes.txt"
+// #define N_DOCS    3000
+// #define DOC_LINES 655468
+#define DOC_COLS  3
+#define N_VOCAB   102660
 
 float** create_bag();
 float** create_distance(float**, int);

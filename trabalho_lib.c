@@ -51,7 +51,7 @@ float max_distortion(float** x, float** wx)
         for (int j = i+1; j < N_DOCS; j++)
         {
             distortion = fabs((wx[i][j] / x[i][j]) - 1);
-            if (distortion > result && fabs(wx[i][j] - 0) > 0.00001) // Ignore distortion on duplicated documents
+            if (distortion > result && fabs(wx[i][j] - 0) > 0.00001 && fabs(x[i][j] - 0) > 0.00001 ) // Ignore distortion on duplicated documents
             {
                 result = distortion;
             }
@@ -69,7 +69,7 @@ float avg_distortion(float** x, float** wx)
         for (int j = i+1; j < N_DOCS; j++)
         {
             distortion = fabs((wx[i][j] / x[i][j]) - 1);
-            if (distortion > result && fabs(wx[i][j] - 0) > 0.00001) // Ignore distortion os duplicated documents
+            if (distortion > result && fabs(wx[i][j] - 0) > 0.00001 && fabs(x[i][j] - 0) > 0.00001 ) // Ignore distortion on duplicated documents
             {
                 result += distortion;
                 count++;
@@ -133,7 +133,7 @@ float** mat_alloc(int rows, int cols)
     check_memory(space);
     for (int i = 0; i < rows; i++)
     {
-        space[i] = malloc(cols * sizeof(float));
+        space[i] = calloc(cols, sizeof(float));
         check_memory(space[i]);
     }
     return space;
