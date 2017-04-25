@@ -1,5 +1,5 @@
 #include <gsl/gsl_linalg.h>
-#include "trabalho_lib.h"
+#include "dim_reduction_lib.h"
 
 int main()
 {

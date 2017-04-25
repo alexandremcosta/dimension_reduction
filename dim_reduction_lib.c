@@ -1,4 +1,4 @@
-#include "trabalho_lib.h"
+#include "dim_reduction_lib.h"
 
 float** create_bag()
 {
