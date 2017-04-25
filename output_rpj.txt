@@ -1,3 +1,5 @@
+Calculating distances... 2348.20 seconds
+
 Number of dimensions: 4
 
 Achlioptas	Matrix (sec)	Proj (sec)	Distance (sec)	Max distortion	Avg distortion
